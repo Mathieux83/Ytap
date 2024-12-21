@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# filepath: /home/meow/DEV/1/install.sh
+# filepath: ytpd/install.sh
 
 # Installer les dépendances système
 sudo apt update
