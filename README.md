@@ -73,3 +73,14 @@ Apres l'installation, vous pouvez activer l'envirement virtuel et executer le sc
 source venv/bin/activate
 python3 ytap.py
 ```
+
+## Utilisation
+
+```bash
+python3 ytap.py
+``` 
+## Utilisation classique des raccourcis clavier pour naviguer dans les résultats de recherche et lire les vidéos avec mpv et fzf.
+
+* fleches haut et bas pour naviguer dans les résultats de recherche
+* enter pour lire la vidéo sélectionnée
+* ESC pour quitter le programme / retour menu principal
