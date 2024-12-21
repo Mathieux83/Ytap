@@ -63,7 +63,7 @@ python3 -m pip install -r requirements.txt
 
 importervotre clé API YouTube dans le fichier `API_KEY` pour pouvoir utiliser les fonctionnalités de recherche et de lecture de vidéos YouTube.
 
-## Installation
+#### Installation
 
 ```bash
 chmod +x install.sh
@@ -74,12 +74,12 @@ source venv/bin/activate
 python3 ytap.py
 ```
 
-## Utilisation
+##### Utilisation
 
 ```bash
 python3 ytap.py
 ``` 
-## Utilisation classique des raccourcis clavier pour naviguer dans les résultats de recherche et lire les vidéos avec mpv et fzf.
+##### Utilisation classique des raccourcis clavier pour naviguer dans les résultats de recherche et lire les vidéos avec mpv et fzf.
 
 * fleches haut et bas pour naviguer dans les résultats de recherche
 * enter pour lire la vidéo sélectionnée
