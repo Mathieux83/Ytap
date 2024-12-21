@@ -1,16 +1,12 @@
 # Liste de To-Do
 
-## Tâches à accomplir
+## Tâches à accomplir 
 
-1. **Ajouter plus d'informations**
-    - [ ] Décrire les fonctionnalités principales
-    - [ ] Ajouter des exemples d'utilisation
-    - [ ] Inclure des captures d'écran
-
-2. **Interactions avec l'interface utilisateur**
+1. **Interactions avec l'interface utilisateur**
     - [ ] Améliorer la navigation
     - [ ] Ajouter des animations pour les transitions
     - [ ] Tester l'accessibilité
+    - [ ] Tester la stabilité
 
 ## Détails
 
