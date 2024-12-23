@@ -16,7 +16,7 @@ def search_youtube(query, search_type='video', event_type=None):
         'part': 'snippet',
         'q': query,
         'key': API_KEY,
-        'maxResults': 10,
+        'maxResults': 20,
         'type': search_type
     }
     if event_type:
@@ -50,7 +50,7 @@ def play_audio(video_id, title, loop=False):
     video_url = get_video_url(video_id)
     if video_url:
         mpv_command = [
-            'mpv', '--no-video','--autoplay=yes',
+            'mpv', '--no-video',
             f'--term-playing-msg=🎵 Now Playing: {title}',
             video_url
         ]
