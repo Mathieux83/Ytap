@@ -1,4 +1,4 @@
-from utils import show_menu, get_search_query, search_youtube, select_option, play_audio, play_playlist, show_help
+from ytap.utils import show_menu, get_search_query, search_youtube, select_option, play_audio, play_playlist, show_help
 
 def main():
     while True:

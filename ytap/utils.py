@@ -50,7 +50,7 @@ def play_audio(video_id, title, loop=False):
     video_url = get_video_url(video_id)
     if video_url:
         mpv_command = [
-            'mpv', '--no-video', 
+            'mpv', '--no-video','--autoplay=yes',
             f'--term-playing-msg=🎵 Now Playing: {title}',
             video_url
         ]

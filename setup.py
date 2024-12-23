@@ -11,7 +11,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'ytap=main:main',
+            'ytap=ytap.main:main',
         ],
     },
     package_data={
