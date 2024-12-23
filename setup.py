@@ -15,12 +15,12 @@ setup(
         ],
     },
     package_data={
-        '': ['config/API_KEY'],
+        '': ['API_KEY'],
     },
     classifiers=[
         'Programming Language :: Python :: 3',
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
     ],
-    python_requires='>=3.6',
+    python_requires='>=3',
 )

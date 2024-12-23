@@ -2,10 +2,15 @@ import requests
 import subprocess
 import sys
 import os
+from pathlib import Path
+
+# Définir le chemin du fichier API_KEY en fonction du répertoire du projet
+BASE_DIR = Path(__file__).resolve().parent
+API_KEY_FILE_PATH = BASE_DIR / 'API_KEY'
 
 # Lire la clé API depuis le fichier config/API_KEY
-with open('config/API_KEY', 'r') as file:
-    API_KEY = file.read().strip()
+with open(API_KEY_FILE_PATH, 'r') as file:
+    API_KEY = file.read()
 
 SEARCH_URL = 'https://www.googleapis.com/youtube/v3/search'
 VIDEO_URL = 'https://www.youtube.com/watch?v='
