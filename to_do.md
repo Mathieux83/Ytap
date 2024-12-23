@@ -1,13 +1,10 @@
-# Liste de To-Do
-
 ## Tâches à accomplir 
 
 1. **Interactions avec l'interface utilisateur**
     - [ ] Améliorer la navigation
-    - [ ] Ajouter des animations pour les transitions
-    - [ ] Tester l'accessibilité
     - [ ] Tester la stabilité
-
+    - [X] Ca fonctionne c'est déjà ca !
+   
 ## Détails
 
 ### Ajouter plus d'informations
