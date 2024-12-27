@@ -38,7 +38,7 @@ def main():
                     print("No playlists found for the query.")
             else:
                 print("No query entered.")
-        elif selected_option == 'ℹ️ Help':
+        elif selected_option == 'ℹ️  Help':
             show_help()
         elif selected_option == '❌ Exit':
             break
