@@ -21,11 +21,11 @@ si pip n'est pas installé, vous pouvez l'installer avec la commande suivante :
 ```bash
 sudo apt install python3-pip
 ```
-or
+ou
 ```bash
 sudo python3 -m pip install --upgrade pip
 ```
-Installation des dependances avec pip
+Installation des dépendances avec pip
 ```bash
 pip install -r requirements.txt
 ```
@@ -43,32 +43,32 @@ pip3 install -r requirements.txt
 Vous pouvez installer les dépendances avec les commandes suivantes :
 ```bash
 python -m pip install -r requirements.txt
-chooco install fzf mpv yt-dlp
+choco install fzf mpv yt-dlp
 ```
 Si python n'est pas installé, vous pouvez l'installer avec la commande suivante :
 ```bash
-chooco install python
+choco install python
 ```
 si pip n'est pas installé, vous pouvez l'installer avec la commande suivante :
 ```bash
-chooco install pip
+choco install pip
 ```
 Si pip ne fonctionne pas, vous pouvez essayer avec venv
 ```bash
 python -m venv venv
 venv\Scripts\activate
-python3 -m pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 ### Configuration
 
-importervotre clé API YouTube dans le fichier `API_KEY` pour pouvoir utiliser les fonctionnalités de recherche et de lecture de vidéos YouTube.
+Importez votre clé API YouTube dans le fichier `API_KEY` pour pouvoir utiliser les fonctionnalités de recherche et de lecture de vidéos YouTube.
 
 #### Installation
 
 ```bash
 chmod +x install.sh
 ```
-Apres l'installation, vous pouvez activer l'envirement virtuel et executer le script avec la commande suivante :
+Après l'installation, vous pouvez activer l'environnement virtuel et exécuter le script avec la commande suivante :
 ```bash
 source venv/bin/activate
 python3 ytap.py
@@ -81,6 +81,6 @@ python3 ytap.py
 ``` 
 ##### Utilisation classique des raccourcis clavier pour naviguer dans les résultats de recherche et lire les vidéos avec mpv et fzf.
 
-* fleches haut et bas pour naviguer dans les résultats de recherche
+* flèches haut et bas pour naviguer dans les résultats de recherche
 * enter pour lire la vidéo sélectionnée
 * ESC pour quitter le programme / retour menu principal

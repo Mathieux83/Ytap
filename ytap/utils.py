@@ -3,14 +3,24 @@ import subprocess
 import sys
 import os
 from pathlib import Path
+from rich.progress import Progress
+from rich.console import Console as console
+import time
 
 # Définir le chemin du fichier API_KEY en fonction du répertoire du projet
 BASE_DIR = Path(__file__).resolve().parent
 API_KEY_FILE_PATH = BASE_DIR / 'API_KEY'
 
 # Lire la clé API depuis le fichier config/API_KEY
-with open(API_KEY_FILE_PATH, 'r') as file:
-    API_KEY = file.read()
+try:
+    with open(API_KEY_FILE_PATH, 'r') as file:
+        API_KEY = file.read().strip()
+except FileNotFoundError:
+    console.print("[red]API_KEY file not found. Please create an API_KEY file with your YouTube API key.")
+    sys.exit(1)
+except Exception as e:
+    console.print(f"[red]An error occurred while reading the API_KEY file: {e}")
+    sys.exit(1)
 
 SEARCH_URL = 'https://www.googleapis.com/youtube/v3/search'
 VIDEO_URL = 'https://www.youtube.com/watch?v='
@@ -61,7 +71,14 @@ def play_audio(video_id, title, loop=False):
         ]
         if loop:
             mpv_command.insert(2, '--loop=inf')
-        subprocess.Popen(mpv_command).wait()
+
+        with Progress() as progress:
+            task = progress.add_task(f"[green]Playing {title}...", total=100)
+            process = subprocess.Popen(mpv_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            while process.poll() is None:
+                progress.update(task, advance=1)
+                time.sleep(1)
+
         subprocess.run(['clear'])
     else:
         print("Failed to retrieve video URL.")
@@ -90,9 +107,9 @@ def play_playlist(playlist_id):
             for video_id, title in zip(video_ids, video_titles):
                 play_audio(video_id, title, loop=False)
         else:
-            print("Playlist playback cancelled.")
+            console.print("[yellow]Playlist playback cancelled.")
     else:
-        print("No videos found in the playlist.")
+        console.print("[red]No videos found in the playlist.")
 
 def show_menu():
     menu_options = [
