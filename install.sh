@@ -1,5 +1,7 @@
 #!/bin/bash
 
+#for deb ignore this
+
 # Installer les dépendances système
 sudo apt update
 sudo apt install -y fzf mpv yt-dlp python3 python3-pip python3-venv
