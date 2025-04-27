@@ -1,6 +1,9 @@
 # YouTube Audio Player aka ytap
 
+### Make sure you have VLC or MPV installed
+
 ## Installation
+
 ```bash
 echo "YOUR_API_KEY" > ytap/API_KEY
 sudo python3 setup.py install
@@ -9,8 +12,13 @@ open a new terminal and type `ytap` to start the program
 ```bash
 ytap
 ```
+## NOW ON WINDOWS 11
+ 
+ 1. clone this repo
+ 2. go to `ytap` folder & edit `API_KEY` for add your YouTube API_KEY
+ 3. On terminal lunch `main.py` with python
 
-##### Utilisation classique des raccourcis clavier pour naviguer dans les résultats de recherche et lire les vidéos avec mpv et fzf.
+##### Utilisation classique des raccourcis clavier pour naviguer dans les résultats de recherche et lire les vidéos avec mpv et fzf. (LINUX)
 
 * 'flèches haut' et 'flèche bas' pour naviguer dans les résultats de recherche
 * 'enter' pour lire la vidéo sélectionnée
