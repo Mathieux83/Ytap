@@ -1,17 +1,10 @@
-#!/bin/bash
+#!/bin/sh
+set -eu
 
-#for deb ignore this
+# Debian/Ubuntu helper; other systems should follow the README prerequisites.
+sudo apt-get update
+sudo apt-get install -y git pipx mpv
+pipx ensurepath
+pipx install git+https://github.com/Mathieux83/Ytap.git
 
-# Installer les dépendances système
-sudo apt update
-sudo apt install -y fzf mpv yt-dlp python3 python3-pip python3-venv
-
-# Créer et activer un environnement virtuel
-python3 -m venv venv
-source venv/bin/activate
-
-# Installer les dépendances Python
-pip install -r requirements.txt
-
-# Message de confirmation
-echo "Installation terminée. Pour démarrer l'application, exécutez 'source venv/bin/activate' puis 'python3 ytap.py'."
+printf "%s\n" "Ytap installed. Restart your terminal if the 'ytap' command is not on PATH."

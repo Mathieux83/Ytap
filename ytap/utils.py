@@ -1,275 +1,283 @@
-import requests
-import subprocess
-import sys
 import os
+import shutil
+import subprocess
+
+import requests
 import yt_dlp
-from pathlib import Path
-import time
-import json
 
-# Définir le chemin du fichier API_KEY en fonction du répertoire du projet
-BASE_DIR = Path(__file__).resolve().parent
-API_KEY_FILE_PATH = BASE_DIR / 'API_KEY'
+from .config import load_api_key
 
-# Lire la clé API depuis le fichier config/API_KEY
-try:
-    with open(API_KEY_FILE_PATH, 'r') as file:
-        API_KEY = file.read().strip()
-except FileNotFoundError:
-    print("[red]API_KEY file not found. Please create an API_KEY file with your YouTube API key.")
-    sys.exit(1)
-except Exception as e:
-    print(f"[red]An error occurred while reading the API_KEY file: {e}")
-    sys.exit(1)
+SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
+PLAYLIST_URL = "https://www.googleapis.com/youtube/v3/playlistItems"
 
-# Vérifier si fzf est installé
-try:
-    subprocess.run(['fzf', '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
-    fzf = True
-except FileNotFoundError:
-    fzf = False
-    ## print("[yellow]fzf n'est pas installé, une version classique du terminal sera utilisée.")
 
-SEARCH_URL = 'https://www.googleapis.com/youtube/v3/search'
-VIDEO_URL = 'https://www.youtube.com/watch?v='
-PLAYLIST_URL = 'https://www.googleapis.com/youtube/v3/playlistItems'
+def search_youtube(query, search_type="video", event_type=None):
+    api_key = load_api_key()
+    if not api_key:
+        print("No YouTube API key configured. Run 'ytap configure' first.")
+        return []
 
-def search_youtube(query, search_type='video', event_type=None):
     params = {
-        'part': 'snippet',
-        'q': query,
-        'key': API_KEY,
-        'maxResults': 20,
-        'type': search_type
+        "part": "snippet",
+        "q": query,
+        "key": api_key,
+        "maxResults": 20,
+        "type": search_type,
     }
     if event_type:
-        params['eventType'] = event_type
-    
-    try:
-        response = requests.get(SEARCH_URL, params=params)
-        response.raise_for_status()  # Raise exception for 4XX/5XX responses
-        data = response.json()
+        params["eventType"] = event_type
 
-        if 'items' in data and len(data['items']) > 0:
-            results = []
-            for item in data['items']:
-                # Vérifier si 'playlistId' est présent dans l'élément
-                if search_type == 'playlist' and 'playlistId' in item['id']:
-                    results.append((item['id']['playlistId'], item['snippet']['title']))
-                elif search_type != 'playlist':
-                    # Pour les vidéos ou autres types, on les ajoute avec leur ID spécifique
-                    results.append((item['id'].get(f'{search_type}Id'), item['snippet']['title']))
-            return results
-        else:
-            return []
-    except requests.exceptions.RequestException as e:
-        print(f"Error connecting to YouTube API: {e}")
+    try:
+        response = requests.get(SEARCH_URL, params=params, timeout=15)
+        response.raise_for_status()
+        items = response.json().get("items", [])
+        id_key = "playlistId" if search_type == "playlist" else f"{search_type}Id"
+        return [
+            (item["id"][id_key], item["snippet"]["title"])
+            for item in items
+            if id_key in item.get("id", {})
+        ]
+    except requests.exceptions.RequestException as error:
+        print(f"Error connecting to YouTube API: {error}")
         return []
 
 
+def _selected_value(option):
+    _, separator, identifier = option.rpartition(" (")
+    if separator and identifier.endswith(")"):
+        return identifier[:-1]
+    return option
+
+
 def select_option(options, prompt):
-    if fzf:
-        fzf_command = f'echo "{options}" | fzf --prompt="{prompt}"'
-        result = subprocess.run(fzf_command, shell=True, capture_output=True, text=True)
-        selected_option = result.stdout.strip()
-        if selected_option:
-            # Extract the ID between the last pair of parentheses
-            try:
-                selected_id = selected_option.split('(')[-1].strip(')')
-                return selected_id
-            except IndexError:
-                print("Failed to parse selected option.")
-                return None
-    else:
-        # Fallback for when fzf is not installed
-        options_list = options.split('\n')
-        for i, option in enumerate(options_list, 1):
-            print(f"{i}. {option}")
-        try:
-            choice = int(input(f"{prompt} (1-{len(options_list)}): "))
-            if 1 <= choice <= len(options_list):
-                selected_option = options_list[choice-1]
-                selected_id = selected_option.split('(')[-1].strip(')')
-                return selected_id
-            else:
-                print("Invalid choice.")
-                return None
-        except ValueError:
-            print("Please enter a number.")
-            return None
+    fzf_path = shutil.which("fzf")
+    if fzf_path:
+        result = subprocess.run(
+            [fzf_path, "--prompt", prompt],
+            input=options,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return _selected_value(result.stdout.strip())
+        return None
+
+    options_list = options.splitlines()
+    for index, option in enumerate(options_list, 1):
+        print(f"{index}. {option}")
+    try:
+        choice = int(input(f"{prompt} (1-{len(options_list)}): "))
+    except ValueError:
+        print("Please enter a number.")
+        return None
+    if 1 <= choice <= len(options_list):
+        return _selected_value(options_list[choice - 1])
+    print("Invalid choice.")
     return None
 
+
 def get_video_url(video_id):
-    ytdl_command = f'yt-dlp -f bestaudio --get-url {VIDEO_URL}{video_id}'
-    result = subprocess.run(ytdl_command, shell=True, capture_output=True, text=True)
-    return result.stdout.strip()
-
-def is_mpv_installed():
-    try:
-        subprocess.run(['mpv', '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
-        return True
-    except FileNotFoundError:
-        return False
-
-def play_audio_with_mpv(video_id, title, loop=False):
-    video_url = get_video_url(video_id)
-    if video_url:
-        try:
-            mpv_command = [
-                'mpv', '--no-video',
-                '--cache=yes', '--cache-secs=3',
-                f'--term-playing-msg=🎵 Now Playing: {title}\n',
-                video_url
-            ]
-            if loop:
-                mpv_command.insert(2, '--loop=inf')
-            subprocess.run(mpv_command, check=False)
-            subprocess.run(['clear'], check=False)
-            return True
-        except Exception as e:
-            print(f"An error occurred while trying to play audio with MPV: {e}")
-            return False
-    else:
-        print(f"Failed to get video URL for : {video_id}, {title}")
-        return False
-
-def play_audio_with_vlc(video_url, loop=False):
-    try:
-        # Extract the direct audio URL with yt-dlp
-        ydl_opts = {
-            'format': 'bestaudio/best',
-            'quiet': True,
-            'skip_download': True,
-        }
-
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(video_url, download=False)
-            stream_url = info['url']  # Direct audio URL
-
-        # Build VLC command
-        vlc_path = r"C:\Program Files\VideoLAN\VLC\vlc.exe"
-        vlc_command = [
-            vlc_path,
-            '--no-video',
-            '--qt-start-minimized',
-            '--play-and-exit',
-            stream_url
-        ]
-
-        # Remove empty arguments
-        vlc_command = [arg for arg in vlc_command if arg]
-        subprocess.run(vlc_command, shell=False)
-
-    except Exception as e:
-        print(f"❌ An error occurred while trying to play audio with VLC: {e}")
-
-def play_playlist(query, playlist_id):
-    query = f'"{query}"'
-    params = {
-        'q': query,
-        'part': 'snippet',
-        'playlistId': playlist_id,
-        'key': API_KEY,
-        'maxResults': 15,
+    video_url = f"https://www.youtube.com/watch?v={video_id}"
+    options = {
+        "format": "bestaudio/best",
+        "quiet": True,
+        "no_warnings": True,
+        "noplaylist": True,
     }
     try:
-        response = requests.get(PLAYLIST_URL, params=params)
+        with yt_dlp.YoutubeDL(options) as downloader:
+            info = downloader.extract_info(video_url, download=False)
+        return info.get("url", "") if info else ""
+    except yt_dlp.utils.DownloadError as error:
+        print(f"Failed to retrieve audio URL for {video_id}: {error}")
+        return ""
+
+
+def is_mpv_installed():
+    return shutil.which("mpv") is not None
+
+
+def get_vlc_path():
+    configured_path = os.environ.get("YTAP_VLC_PATH")
+    if configured_path:
+        path = os.path.expandvars(os.path.expanduser(configured_path))
+        if os.path.isfile(path) and (os.name == "nt" or os.access(path, os.X_OK)):
+            return path
+        return None
+
+    vlc_path = shutil.which("vlc")
+    if vlc_path:
+        return vlc_path
+
+    if os.name == "nt":
+        for variable in ("ProgramFiles", "ProgramFiles(x86)"):
+            program_files = os.environ.get(variable)
+            if program_files:
+                candidate = os.path.join(program_files, "VideoLAN", "VLC", "vlc.exe")
+                if os.path.isfile(candidate):
+                    return candidate
+    return None
+
+
+def is_vlc_installed():
+    return get_vlc_path() is not None
+
+
+def play_audio_with_mpv(video_id, title, loop=False):
+    mpv_path = shutil.which("mpv")
+    if not mpv_path:
+        print("mpv is not installed or is not available on PATH.")
+        return False
+    video_url = get_video_url(video_id)
+    if not video_url:
+        print(f"Failed to get an audio URL for {video_id} ({title}).")
+        return False
+
+    command = [
+        mpv_path,
+        "--no-video",
+        "--cache=yes",
+        "--cache-secs=3",
+        f"--term-playing-msg=Now Playing: {title}",
+    ]
+    if loop:
+        command.append("--loop=inf")
+    command.append(video_url)
+
+    try:
+        result = subprocess.run(command, check=False)
+    except OSError as error:
+        print(f"An error occurred while starting mpv: {error}")
+        return False
+    return result.returncode == 0
+
+
+def play_audio_with_vlc(video_id, title, loop=False):
+    vlc_path = get_vlc_path()
+    if not vlc_path:
+        print("VLC is not installed or could not be found. Set YTAP_VLC_PATH if needed.")
+        return False
+
+    video_url = get_video_url(video_id)
+    if not video_url:
+        print(f"Failed to get an audio URL for {video_id} ({title}).")
+        return False
+
+    command = [vlc_path, "--no-video", "--play-and-exit"]
+    if loop:
+        command.append("--repeat")
+    command.append(video_url)
+    try:
+        result = subprocess.run(command, check=False)
+    except OSError as error:
+        print(f"An error occurred while starting VLC: {error}")
+        return False
+    return result.returncode == 0
+
+
+def play_playlist(playlist_id):
+    api_key = load_api_key()
+    if not api_key:
+        print("No YouTube API key configured. Run 'ytap configure' first.")
+        return
+
+    params = {
+        "part": "snippet",
+        "playlistId": playlist_id,
+        "key": api_key,
+        "maxResults": 50,
+    }
+    try:
+        response = requests.get(PLAYLIST_URL, params=params, timeout=15)
         response.raise_for_status()
-        data = response.json()
+        items = response.json().get("items", [])
+    except requests.exceptions.RequestException as error:
+        print(f"Error fetching playlist: {error}")
+        return
 
-        if 'items' in data and len(data['items']) > 0:
-            # Titre de la playlist (pas de la première vidéo) // 
-            # To do ammeliorer cette partie du code pour la rendre efficace
-            # Ca m'affiche le titre de la 1er vidéo pas le titre de la playliste 
-            playlist_title = data['items'][0]['snippet']['title']
-            
-            # Collecte des vidéos de la playlist
-            video_ids = [item['snippet']['resourceId']['videoId'] for item in data['items']]
-            video_titles = [item['snippet']['title'] for item in data['items']]
+    videos = [
+        (item["snippet"]["resourceId"]["videoId"], item["snippet"]["title"])
+        for item in items
+        if item.get("snippet", {}).get("resourceId", {}).get("videoId")
+    ]
+    if not videos:
+        print("No videos found in the playlist.")
+        return
 
-            options = "\n".join([f"{title}" for title in video_titles])  # Titres des vidéos
-            
-            # Afficher le titre de la playlist
-            print(f"Playlist: {playlist_title}")
-            print("Videos in the playlist:")
-            print(options)
-            
-            confirm = input("Do you want to play this playlist? (y/n): ")
+    print(f"Playlist: {playlist_id}")
+    print("Videos in the playlist:")
+    for _, title in videos:
+        print(title)
+    if input("Do you want to play this playlist? (y/n): ").strip().lower() != "y":
+        return
 
-            if confirm.lower() == 'y':
-                for video_id, title in zip(video_ids, video_titles):
-                    video_url = get_video_url(video_id)
-                    if is_mpv_installed():
-                        print(f"🎵 Now Playing: {title}")
-                        play_audio_with_mpv(video_url, title, loop=False)
-                    else:
-                        print(f"🎵 Now Playing: {title}")
-                        play_audio_with_vlc(video_url, title)
-            else:
-                print("[red]No videos found in the playlist.")
-        else:
-            print("[red]No videos found in the playlist.")
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching playlist: {e}")
-
+    player = play_audio_with_mpv if is_mpv_installed() else play_audio_with_vlc
+    for video_id, title in videos:
+        print(f"Now Playing: {title}")
+        player(video_id, title, loop=False)
 
 
 def show_menu():
     menu_options = {
-        1: '🔍 Search for a video',
-        2: '📂 Search for a playlist',
-        3: 'ℹ️ Help',
-        4: '❌ Exit'
+        1: "🔍 Search for a video",
+        2: "📂 Search for a playlist",
+        3: "ℹ️ Help",
+        4: "❌ Exit",
     }
-    
-    if fzf:
+    if shutil.which("fzf"):
         options = "\n".join(menu_options.values())
         selected_option = select_option(options, "Select an option: ")
-        # Try to match the selected_option with the menu values
-        for num, text in menu_options.items():
-            if selected_option == str(num) or selected_option in text:
-                return str(num)
+        for number, label in menu_options.items():
+            if selected_option == str(number) or selected_option == label:
+                return str(number)
         return selected_option
-    else:
-        # Simple menu for terminal without fzf
-        print("\n=== YouTube Audio Player ===")
-        for num, text in menu_options.items():
-            print(f"{num}. {text}")
-        try:
-            choice = int(input("Select an option (1-4): "))
-            if 1 <= choice <= 4:
-                return str(choice)
-            else:
-                print("Invalid choice. Please enter a number between 1 and 4.")
-                return None
-        except ValueError:
-            print("Please enter a number.")
-            return None
+
+    print("\n=== YouTube Audio Player ===")
+    for number, label in menu_options.items():
+        print(f"{number}. {label}")
+    try:
+        choice = int(input("Select an option (1-4): "))
+    except ValueError:
+        print("Please enter a number.")
+        return None
+    if 1 <= choice <= 4:
+        return str(choice)
+    print("Invalid choice. Please enter a number between 1 and 4.")
+    return None
+
 
 def show_help():
-    help_text = """
-    YouTube Audio Player Help:
-    
-    🔍 Search for a video: Search for a video on YouTube and play the audio.
-    📂 Search for a playlist: Search for a playlist on YouTube and play the audio.
-    ℹ️ Help: Show this help menu.
-    ❌ Exit: Exit the application.
-    
-    Controls:
-    - Use the arrow keys to navigate the menu.
-    - Press Enter to select an option.
-    - Press Esc to exit the menu.
-    """
-    print(help_text)
-    wait = input("Press Enter to continue...")
-    subprocess.run(['cls' if os.name == 'nt' else 'clear'], shell=True, check=False)
+    print(
+        """
+YouTube Audio Player Help:
+
+Search for a video or playlist on YouTube and play its audio.
+fzf is optional; without it, use the numbered terminal menus.
+"""
+    )
+    input("Press Enter to continue...")
+    subprocess.run(["cls" if os.name == "nt" else "clear"], check=False)
+
 
 def get_search_query():
-    if fzf:  # si fzf est installé
-        # Utiliser fzf pour la saisie de la requête de recherche
-        fzf_command = 'echo "" | fzf --print-query --prompt="Enter search query: " --header="YouTube Audio Player"'
-        query = subprocess.run(fzf_command, shell=True, capture_output=True, text=True).stdout.strip()
-    else:
-        # Si fzf n'est pas installé, utiliser une saisie classique
-        query = input("Enter search query: ").strip()
-    return query
+    fzf_path = shutil.which("fzf")
+    if fzf_path:
+        result = subprocess.run(
+            [
+                fzf_path,
+                "--print-query",
+                "--prompt",
+                "Enter search query: ",
+                "--header",
+                "YouTube Audio Player",
+            ],
+            input="",
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.stdout:
+            return result.stdout.splitlines()[0].strip()
+        return ""
+    return input("Enter search query: ").strip()
